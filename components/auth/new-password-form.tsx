@@ -1,0 +1,109 @@
+"use client";
+
+import { CardWrapper } from "@/components/auth/card-warpper";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+
+import { newPassword } from "@/actions/new-password";
+import { FormError } from "@/components/form-error";
+import { FormSucess } from "@/components/form-sucess";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NewPasswordSchema } from "@/schemas";
+import { useSearchParams } from "next/navigation";
+import { useState, useTransition } from "react";
+
+export const NewPasswordForm = () => {
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token");
+
+  const [error, setError] = useState<string | undefined>("");
+  const [sucess, setSucess] = useState<string | undefined>("");
+  const [isPending, startTransition] = useTransition();
+
+  const form = useForm<z.infer<typeof NewPasswordSchema>>({
+    resolver: zodResolver(NewPasswordSchema),
+    defaultValues: {
+      password: "",
+      confirmPassword: "",
+    },
+  });
+
+  const onSubmit = (values: z.infer<typeof NewPasswordSchema>) => {
+    setError("");
+    setSucess("");
+
+    startTransition(() => {
+      newPassword(values, token).then((data) => {
+        setError(data?.error);
+        // TODO: Add when we add 2FA
+        setSucess(data?.success);
+      });
+    });
+  };
+
+  return (
+    <CardWrapper
+      headerLabel="Enter a new passsword!"
+      backButtonLabel="Back to login"
+      backButtonHref="/auth/login"
+    >
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Password</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      disabled={isPending}
+                      placeholder="******"
+                      type="password"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirm password</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      disabled={isPending}
+                      placeholder="******"
+                      type="password"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <FormError message={error} />
+          <FormSucess message={sucess} />
+          <Button type="submit" className="w-full" disabled={isPending}>
+            Reset Password
+          </Button>
+        </form>
+      </Form>
+    </CardWrapper>
+  );
+};
