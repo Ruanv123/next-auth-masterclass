@@ -1,8 +1,14 @@
 "use client";
 
-import { CardWrapper } from "@/components/auth/card-warpper";
+import * as z from "zod";
 import { useForm } from "react-hook-form";
+import { useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
+import Link from "next/link";
+
+import { LoginSchema } from "@/schemas";
+import { Input } from "@/components/ui/input";
 import {
   Form,
   FormControl,
@@ -11,20 +17,16 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import * as z from "zod";
 
-import { LoginSchema } from "@/schemas";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { FormError } from "@/components/form-error";
 import { FormSucess } from "@/components/form-sucess";
 import { login } from "@/actions/login";
-import { useState, useTransition } from "react";
-import { useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { CardWrapper } from "@/components/auth/card-warpper";
 
 export const LoginForm = () => {
   const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl");
   const urlError =
     searchParams.get("error") === "OAuthAccountNotLinked"
       ? "Email already in use with different provider!"
@@ -32,7 +34,7 @@ export const LoginForm = () => {
 
   const [showTwoFactor, setShowTwoFactor] = useState(false);
   const [error, setError] = useState<string | undefined>("");
-  const [sucess, setSucess] = useState<string | undefined>("");
+  const [success, setSuccess] = useState<string | undefined>("");
   const [isPending, startTransition] = useTransition();
 
   const form = useForm<z.infer<typeof LoginSchema>>({
@@ -45,10 +47,10 @@ export const LoginForm = () => {
 
   const onSubmit = (values: z.infer<typeof LoginSchema>) => {
     setError("");
-    setSucess("");
+    setSuccess("");
 
     startTransition(() => {
-      login(values)
+      login(values, callbackUrl)
         .then((data) => {
           if (data?.error) {
             form.reset();
@@ -57,16 +59,14 @@ export const LoginForm = () => {
 
           if (data?.success) {
             form.reset();
-            setSucess(data.success);
+            setSuccess(data.success);
           }
 
           if (data?.twoFactor) {
             setShowTwoFactor(true);
           }
         })
-        .catch(() => {
-          setError("Something went wrong");
-        });
+        .catch(() => setError("Something went wrong"));
     });
   };
 
@@ -139,7 +139,7 @@ export const LoginForm = () => {
                         asChild
                         className="px-0 font-normal"
                       >
-                        <Link href="/auth/reset">Forgot Password</Link>
+                        <Link href="/auth/reset">Forgot password?</Link>
                       </Button>
                       <FormMessage />
                     </FormItem>
@@ -149,8 +149,8 @@ export const LoginForm = () => {
             )}
           </div>
           <FormError message={error || urlError} />
-          <FormSucess message={sucess} />
-          <Button type="submit" className="w-full" disabled={isPending}>
+          <FormSucess message={success} />
+          <Button disabled={isPending} type="submit" className="w-full">
             {showTwoFactor ? "Confirm" : "Login"}
           </Button>
         </form>
